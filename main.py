@@ -1,6 +1,7 @@
 from sys import argv
 
 import gspread
+from gspread.utils import rowcol_to_a1
 
 from assignment import Assignment
 
@@ -25,12 +26,19 @@ def processing_base(url: str, credentials_filename: str):
         assignment.put_in_worksheet(assignment_sheet)
 
     if len(spreadsheet.worksheets()) == 3:
-        worksheet = spreadsheet.get_worksheet(2).duplicate(insert_sheet_index=3, new_sheet_name="Review scores")
+        new_values = []
+        max_length = 1
 
-        worksheet.append_row(["Scores:"])
-        for row_i in range(worksheet.row_count - 1, 1, -1):
-            worksheet.insert_row(["Scores:"], index=row_i)
+        for old_value in spreadsheet.get_worksheet(2).get_all_values():
+            new_values.append(old_value)
+            new_values.append(["Score:"])
 
+            max_length = max(max_length, len(old_value))
+
+        scores_worksheet = spreadsheet.add_worksheet("Review scores", len(new_values), max_length)
+        scores_worksheet.update(range_name=f"A1:{rowcol_to_a1(len(new_values), max_length)}", values=new_values)
+
+        """
         for row_i in range(2, worksheet.row_count + 1, 2):
             worksheet.format(f"A{row_i}", {
                 "textFormat": {
@@ -41,6 +49,7 @@ def processing_base(url: str, credentials_filename: str):
                     }
                 }
             })
+        """
 
         return
 

@@ -1,5 +1,7 @@
 from flow import get_flow
 
+from gspread.utils import rowcol_to_a1
+
 
 class Assignment:
     class InsufficientReviewers(Exception):
@@ -41,9 +43,12 @@ class Assignment:
     def get_sheet_size(self):
         return len(self._assignment), self._reviewers_per_work + 1
 
-    def put_in_worksheet(self, worksheet):
-        for row_i, work_reviewers in enumerate(self._assignment):
-            worksheet.update_cell(row_i + 1, 1, self._works[row_i])
+    def get_reviewer_name(self, reviewer_i: int) -> str:
+        return self._reviewers[reviewer_i][0]
 
-            for col_i, reviewer_i in enumerate(work_reviewers):
-                worksheet.update_cell(row_i + 1, col_i + 2, self._reviewers[reviewer_i][0])
+    def put_in_worksheet(self, worksheet):
+        rows, cols = self.get_sheet_size()
+        end = rowcol_to_a1(rows, cols)
+
+        worksheet.update(f"A1:{end}", [[self._works[i]] +
+                                       list(map(self.get_reviewer_name, self._assignment[i])) for i in range(rows)])
