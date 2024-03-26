@@ -1,49 +1,42 @@
-from random import randrange
-
-
-class _ServiceException(Exception):
-    pass
+from flow import get_flow
 
 
 class Assignment:
+    class InsufficientReviewers(Exception):
+        pass
+
     def __init__(self, works: list[str], reviewers: list[(str, int)], reviewers_per_work: int):
         self._works = works
         self._reviewers = reviewers
         self._reviewers_per_work = reviewers_per_work
 
-        while True:
-            try:
-                temp_reviewer_nums = [r[1] for r in reviewers]
-                self._assignment = []
+        works_part_size = 1 + len(works)
+        graph_size = works_part_size + len(reviewers) + 1
+        graph = [[0 for _ in range(graph_size)] for _ in range(graph_size)]
 
-                for _work in self._works:
-                    work_reviewers = set()
-                    generator_num = sum(temp_reviewer_nums)
+        for w in range(1, works_part_size):
+            graph[0][w] = reviewers_per_work
 
-                    while len(work_reviewers) < reviewers_per_work:
-                        if generator_num <= 0:
-                            raise _ServiceException
-                        rand_num = randrange(generator_num)
+            for r in range(works_part_size, graph_size - 1):
+                graph[w][r] = 1
 
-                        for i, reviewer_num in enumerate(temp_reviewer_nums):
-                            if i in work_reviewers:
-                                continue
+        for r in range(works_part_size, graph_size - 1):
+            graph[r][graph_size - 1] = reviewers[r - works_part_size][1]
 
-                            rand_num -= reviewer_num
+        flow, graph = get_flow(graph, 0, graph_size - 1)
 
-                            if rand_num < 0:
-                                generator_num -= reviewer_num
-                                temp_reviewer_nums[i] -= 1
-                                work_reviewers.add(i)
-                                break
+        if flow < reviewers_per_work * len(works):
+            raise Assignment.InsufficientReviewers()
 
-                    self._assignment.append(work_reviewers)
+        self._assignment = []
+        for w in range(1, works_part_size):
+            work_reviewers = set()
 
-            except _ServiceException:
-                continue
+            for r in range(works_part_size, graph_size - 1):
+                if graph[r][w] == 1:
+                    work_reviewers.add(r - works_part_size)
 
-            else:
-                break
+            self._assignment.append(work_reviewers)
 
     def get_sheet_size(self):
         return len(self._assignment), self._reviewers_per_work + 1
