@@ -4,6 +4,7 @@ import gspread
 from gspread.utils import rowcol_to_a1
 
 from assignment import Assignment
+from analytics import analytics
 
 REVIEWERS_PER_WORK = 2
 
@@ -11,6 +12,9 @@ REVIEWERS_PER_WORK = 2
 def processing_base(url: str, credentials_filename: str):
     gc = gspread.service_account(filename=credentials_filename)
     spreadsheet = gc.open_by_url(url)
+
+    if len(spreadsheet.worksheets()) < 2:
+        exit(347862387)  # TODO?
 
     if len(spreadsheet.worksheets()) == 2:
         works = []
@@ -54,7 +58,14 @@ def processing_base(url: str, credentials_filename: str):
         return
 
     else:
-        exit(123822)  # TODO
+        scores_worksheet_data = spreadsheet.get_worksheet(3).get_all_values()
+
+        to_sheet = analytics(scores_worksheet_data)
+
+        analytics_worksheet = spreadsheet.add_worksheet("Analytics", len(to_sheet), len(to_sheet[0]))
+        analytics_worksheet.update(range_name=f"A1:{rowcol_to_a1(len(to_sheet), len(to_sheet[0]))}", values=to_sheet)
+
+        return
 
 
 if __name__ == "__main__":
